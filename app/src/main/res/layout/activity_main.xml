@@ -1,0 +1,395 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/colorBg"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- Video + Drawing overlay -->
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="210dp"
+            android:background="#000000">
+
+            <androidx.media3.ui.PlayerView
+                android:id="@+id/playerView"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                app:use_controller="false"
+                app:resize_mode="fit" />
+
+            <com.framecaddy.app.DrawingOverlayView
+                android:id="@+id/drawingView"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
+
+            <TextView
+                android:id="@+id/tvNoVideo"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:text="Tap Load Video to begin"
+                android:textColor="#80FFFFFF"
+                android:textSize="14sp" />
+
+        </FrameLayout>
+
+        <!-- Load video button -->
+        <Button
+            android:id="@+id/btnLoadVideo"
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:layout_marginStart="6dp"
+            android:layout_marginEnd="6dp"
+            android:layout_marginTop="6dp"
+            android:text="📂  Load Video"
+            android:textColor="@color/colorText"
+            android:backgroundTint="@color/colorAccent"
+            android:textSize="13sp" />
+
+        <!-- Drawing toolbar -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            android:orientation="horizontal"
+            android:background="@color/colorSurface"
+            android:layout_marginTop="6dp"
+            android:gravity="center_vertical"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp">
+
+            <Button
+                android:id="@+id/btnToolDraw"
+                android:layout_width="0dp"
+                android:layout_height="36dp"
+                android:layout_weight="1"
+                android:text="✏ Draw"
+                android:textSize="11sp"
+                android:textColor="@color/colorText"
+                android:backgroundTint="@color/colorAccent"
+                android:layout_marginEnd="3dp" />
+
+            <Button
+                android:id="@+id/btnToolLine"
+                android:layout_width="0dp"
+                android:layout_height="36dp"
+                android:layout_weight="1"
+                android:text="⟋ Line"
+                android:textSize="11sp"
+                android:textColor="@color/colorText"
+                android:backgroundTint="@color/colorBtn"
+                android:layout_marginEnd="3dp" />
+
+            <Button
+                android:id="@+id/btnUndo"
+                android:layout_width="0dp"
+                android:layout_height="36dp"
+                android:layout_weight="0.8"
+                android:text="↩"
+                android:textSize="14sp"
+                android:textColor="@color/colorText"
+                android:backgroundTint="@color/colorBtn"
+                android:layout_marginEnd="3dp" />
+
+            <Button
+                android:id="@+id/btnClearDraw"
+                android:layout_width="0dp"
+                android:layout_height="36dp"
+                android:layout_weight="0.8"
+                android:text="🗑"
+                android:textSize="14sp"
+                android:textColor="@color/colorText"
+                android:backgroundTint="@color/colorBtn"
+                android:layout_marginEnd="6dp" />
+
+            <!-- Color buttons -->
+            <View
+                android:id="@+id/btnColorWhite"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:background="#FFFFFF"
+                android:layout_marginEnd="4dp" />
+
+            <View
+                android:id="@+id/btnColorRed"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:background="#F44336"
+                android:layout_marginEnd="4dp" />
+
+            <View
+                android:id="@+id/btnColorYellow"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:background="#FFEB3B"
+                android:layout_marginEnd="4dp" />
+
+            <View
+                android:id="@+id/btnColorGreen"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:background="#4CAF50" />
+
+        </LinearLayout>
+
+        <!-- Trim info + position -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="28dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:background="@color/colorSurface"
+            android:layout_marginTop="2dp">
+
+            <TextView
+                android:id="@+id/tvTrimInfo"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Start: 0ms  |  End: --"
+                android:textColor="@color/colorTextSecondary"
+                android:textSize="11sp" />
+
+            <TextView
+                android:id="@+id/tvPosition"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0ms"
+                android:textColor="@color/colorAccent"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+        </LinearLayout>
+
+        <!-- Scrub bar -->
+        <SeekBar
+            android:id="@+id/seekBar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:layout_marginEnd="4dp"
+            android:layout_marginTop="2dp"
+            android:progressTint="@color/colorAccent"
+            android:thumbTint="@color/colorAccent" />
+
+        <!-- Playback controls row 1: step -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            android:orientation="horizontal"
+            android:layout_marginTop="4dp"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp">
+
+            <Button
+                android:id="@+id/btnBack1s"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:text="⏮1s"
+                android:textSize="11sp"
+                android:textColor="@color/colorText"
+                android:backgroundTint="@color/colorBtn"
+                android:layout_marginEnd="3dp" />
+
+            <Button
+                android:id="@+id/btnBack100"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:text="-100ms"
+                android:textSize="11sp"
+                android:textColor="@color/colorText"
+                android:backgroundTint="@color/colorBtn"
+                android:layout_marginEnd="3dp" />
+
+            <Button
+                android:id="@+id/btnPlay"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1.2"
+                android:text="▶"
+                android:textSize="18sp"
+                android:textColor="@color/colorText"
+                android:backgroundTint="@color/colorAccent"
+                android:layout_marginEnd="3dp" />
+
+            <Button
+                android:id="@+id/btnFwd100"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:text="+100ms"
+                android:textSize="11sp"
+                android:textColor="@color/colorText"
+                android:backgroundTint="@color/colorBtn"
+                android:layout_marginEnd="3dp" />
+
+            <Button
+                android:id="@+id/btnFwd1s"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:text="1s⏭"
+                android:textSize="11sp"
+                android:textColor="@color/colorText"
+                android:backgroundTint="@color/colorBtn" />
+
+        </LinearLayout>
+
+        <!-- Playback controls row 2: speed + trim -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            android:orientation="horizontal"
+            android:layout_marginTop="4dp"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp">
+
+            <Button
+                android:id="@+id/btnSpeed025"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:text=".25×"
+                android:textSize="11sp"
+                android:textColor="@color/colorText"
+                android:backgroundTint="@color/colorBtn"
+                android:layout_marginEnd="3dp" />
+
+            <Button
+                android:id="@+id/btnSpeed05"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:text=".5×"
+                android:textSize="11sp"
+                android:textColor="@color/colorText"
+                android:backgroundTint="@color/colorBtn"
+                android:layout_marginEnd="3dp" />
+
+            <Button
+                android:id="@+id/btnSpeed1"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:text="1×"
+                android:textSize="11sp"
+                android:textColor="@color/colorText"
+                android:backgroundTint="@color/colorAccent"
+                android:layout_marginEnd="3dp" />
+
+            <Button
+                android:id="@+id/btnSetStart"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1.3"
+                android:text="▸ Start"
+                android:textSize="11sp"
+                android:textColor="@color/colorText"
+                android:backgroundTint="@color/colorBtnTrim"
+                android:layout_marginEnd="3dp" />
+
+            <Button
+                android:id="@+id/btnSetEnd"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1.3"
+                android:text="End ◂"
+                android:textSize="11sp"
+                android:textColor="@color/colorText"
+                android:backgroundTint="@color/colorBtnTrim" />
+
+        </LinearLayout>
+
+        <!-- Frame interval + extract -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="6dp"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:background="@color/colorSurface">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Frame every:"
+                android:textColor="@color/colorText"
+                android:textSize="13sp"
+                android:layout_marginEnd="6dp" />
+
+            <EditText
+                android:id="@+id/etInterval"
+                android:layout_width="72dp"
+                android:layout_height="wrap_content"
+                android:inputType="number"
+                android:text="100"
+                android:textColor="@color/colorText"
+                android:backgroundTint="@color/colorAccent"
+                android:textSize="14sp"
+                android:textAlignment="center" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="ms"
+                android:textColor="@color/colorTextSecondary"
+                android:textSize="13sp"
+                android:layout_marginStart="4dp"
+                android:layout_marginEnd="8dp" />
+
+            <Button
+                android:id="@+id/btnExtract"
+                android:layout_width="0dp"
+                android:layout_height="40dp"
+                android:layout_weight="1"
+                android:text="Extract Frames"
+                android:textSize="12sp"
+                android:textColor="@color/colorText"
+                android:backgroundTint="@color/colorAccent" />
+
+        </LinearLayout>
+
+        <!-- Export button -->
+        <Button
+            android:id="@+id/btnExport"
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            android:layout_marginStart="6dp"
+            android:layout_marginEnd="6dp"
+            android:layout_marginTop="6dp"
+            android:text="Export Selected"
+            android:textColor="@color/colorText"
+            android:backgroundTint="@color/colorBtn"
+            android:enabled="false"
+            android:textSize="13sp" />
+
+        <!-- Frames grid -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/framesGrid"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:nestedScrollingEnabled="false"
+            android:clipToPadding="false"
+            android:padding="3dp" />
+
+        <!-- Bottom padding -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="16dp" />
+
+    </LinearLayout>
+
+</ScrollView>
