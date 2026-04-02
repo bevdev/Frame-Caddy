@@ -13,6 +13,8 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.provider.MediaStore
+import android.view.MotionEvent
+import android.view.ScaleGestureDetector
 import android.view.View
 import android.widget.*
 import androidx.activity.result.contract.ActivityResultContracts
@@ -23,8 +25,6 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
-import androidx.recyclerview.widget.GridLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -32,33 +32,49 @@ import kotlinx.coroutines.withContext
 class MainActivity : AppCompatActivity() {
 
     private lateinit var playerView: PlayerView
+    private lateinit var videoContent: FrameLayout
     private lateinit var drawingView: DrawingOverlayView
     private lateinit var tvNoVideo: TextView
     private lateinit var seekBar: SeekBar
     private lateinit var tvPosition: TextView
     private lateinit var tvTrimInfo: TextView
-    private lateinit var etInterval: EditText
-    private lateinit var framesGrid: RecyclerView
-    private lateinit var btnExtract: Button
-    private lateinit var btnExport: Button
     private lateinit var btnPlay: Button
+    private lateinit var btnAdjust: Button
+    private lateinit var normalControls: View
+    private lateinit var adjustControls: View
 
     private var player: ExoPlayer? = null
     private var videoUri: Uri? = null
     private var videoDurationMs: Long = 0
     private var trimStartMs: Long = 0
     private var trimEndMs: Long = 0
+    private var adjustModeActive = false
 
-    private lateinit var frameAdapter: FrameAdapter
+    // Pan/zoom state
+    private var videoScaleFactor = 1f
+    private var lastTouchX = 0f
+    private var lastTouchY = 0f
+    private lateinit var scaleDetector: ScaleGestureDetector
+
     private val handler = Handler(Looper.getMainLooper())
-
     private val prefs by lazy { getSharedPreferences("framecaddy", MODE_PRIVATE) }
+
+    // Hold-to-scrub
+    private var scrubRunnable: Runnable? = null
 
     private val positionUpdater = object : Runnable {
         override fun run() {
-            val pos = player?.currentPosition ?: return
-            seekBar.progress = pos.toInt()
-            tvPosition.text = "${pos}ms"
+            val p = player ?: return
+            val pos = p.currentPosition
+            val end = effectiveTrimEnd()
+            if (p.isPlaying && end > 0 && pos >= end) {
+                p.seekTo(trimStartMs)
+                seekBar.progress = trimStartMs.toInt()
+                tvPosition.text = "${trimStartMs}ms"
+            } else {
+                seekBar.progress = pos.toInt()
+                tvPosition.text = "${pos}ms"
+            }
             handler.postDelayed(this, 100)
         }
     }
@@ -78,24 +94,54 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         bindViews()
+        setupScaleDetector()
         setupPlayer()
-        setupFrameGrid()
         setupControls()
-        etInterval.setText(prefs.getString("interval", "100"))
     }
 
     private fun bindViews() {
         playerView = findViewById(R.id.playerView)
+        videoContent = findViewById(R.id.videoContent)
         drawingView = findViewById(R.id.drawingView)
         tvNoVideo = findViewById(R.id.tvNoVideo)
         seekBar = findViewById(R.id.seekBar)
         tvPosition = findViewById(R.id.tvPosition)
         tvTrimInfo = findViewById(R.id.tvTrimInfo)
-        etInterval = findViewById(R.id.etInterval)
-        framesGrid = findViewById(R.id.framesGrid)
-        btnExtract = findViewById(R.id.btnExtract)
-        btnExport = findViewById(R.id.btnExport)
         btnPlay = findViewById(R.id.btnPlay)
+        btnAdjust = findViewById(R.id.btnAdjust)
+        normalControls = findViewById(R.id.normalControls)
+        adjustControls = findViewById(R.id.adjustControls)
+    }
+
+    private fun setupScaleDetector() {
+        scaleDetector = ScaleGestureDetector(this, object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
+            override fun onScale(detector: ScaleGestureDetector): Boolean {
+                videoScaleFactor = (videoScaleFactor * detector.scaleFactor).coerceIn(0.5f, 4f)
+                videoContent.scaleX = videoScaleFactor
+                videoContent.scaleY = videoScaleFactor
+                return true
+            }
+        })
+
+        videoContent.setOnTouchListener { _, event ->
+            if (!adjustModeActive || drawingView.touchEnabled) return@setOnTouchListener false
+            scaleDetector.onTouchEvent(event)
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    lastTouchX = event.x
+                    lastTouchY = event.y
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    if (!scaleDetector.isInProgress) {
+                        videoContent.translationX += event.x - lastTouchX
+                        videoContent.translationY += event.y - lastTouchY
+                        lastTouchX = event.x
+                        lastTouchY = event.y
+                    }
+                }
+            }
+            true
+        }
     }
 
     private fun setupPlayer() {
@@ -120,31 +166,20 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun setupFrameGrid() {
-        frameAdapter = FrameAdapter(
-            onFrameClick = { ms ->
-                player?.seekTo(trimStartMs + ms)
-                val pos = player?.currentPosition ?: 0
-                seekBar.progress = pos.toInt()
-                tvPosition.text = "${pos}ms"
-            },
-            onSelectionChanged = { count ->
-                btnExport.isEnabled = count > 0
-                btnExport.text = if (count > 0) "Export Selected ($count)" else "Export Selected"
-                btnExport.backgroundTintList = android.content.res.ColorStateList.valueOf(
-                    if (count > 0) Color.parseColor("#4CAF50") else Color.parseColor("#2D2D2D")
-                )
-            }
-        )
-        framesGrid.layoutManager = GridLayoutManager(this, 2)
-        framesGrid.adapter = frameAdapter
-        framesGrid.isNestedScrollingEnabled = false
-    }
-
     private fun setupControls() {
+        // Load video
         findViewById<Button>(R.id.btnLoadVideo).setOnClickListener { requestVideoAccess() }
+
+        // Capture screen
+        findViewById<Button>(R.id.btnCapture).setOnClickListener { openCapture() }
+
+        // Adjust mode toggle
+        btnAdjust.setOnClickListener { toggleAdjustMode() }
+
+        // Play/pause
         btnPlay.setOnClickListener { togglePlay() }
 
+        // Seekbar
         seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(sb: SeekBar, progress: Int, fromUser: Boolean) {
                 if (fromUser) {
@@ -156,55 +191,70 @@ class MainActivity : AppCompatActivity() {
             override fun onStopTrackingTouch(sb: SeekBar) {}
         })
 
-        // Step controls
-        findViewById<Button>(R.id.btnBack1s).setOnClickListener { stepBy(-1000) }
-        findViewById<Button>(R.id.btnBack100).setOnClickListener { stepBy(-100) }
-        findViewById<Button>(R.id.btnFwd100).setOnClickListener { stepBy(100) }
-        findViewById<Button>(R.id.btnFwd1s).setOnClickListener { stepBy(1000) }
+        // Step buttons with hold-to-scrub
+        setupHoldStep(R.id.btnBack500, -500)
+        setupHoldStep(R.id.btnBack250, -250)
+        setupHoldStep(R.id.btnBack100, -100)
+        setupHoldStep(R.id.btnFwd100, 100)
+        setupHoldStep(R.id.btnFwd250, 250)
+        setupHoldStep(R.id.btnFwd500, 500)
 
-        // Speed
-        val speedBtns = listOf(
-            R.id.btnSpeed025 to 0.25f,
-            R.id.btnSpeed05 to 0.5f,
-            R.id.btnSpeed1 to 1.0f
-        )
-        speedBtns.forEach { (id, speed) ->
+        // Speed buttons
+        val speedMap = listOf(R.id.btnSpeed025 to 0.25f, R.id.btnSpeed05 to 0.5f, R.id.btnSpeed1 to 1.0f)
+        speedMap.forEach { (id, speed) ->
             findViewById<Button>(id).setOnClickListener {
                 player?.setPlaybackSpeed(speed)
-                speedBtns.forEach { (bid, _) ->
+                speedMap.forEach { (bid, _) ->
                     findViewById<Button>(bid).backgroundTintList =
-                        android.content.res.ColorStateList.valueOf(Color.parseColor("#2D2D2D"))
+                        android.content.res.ColorStateList.valueOf(Color.parseColor("#42A5F5"))
                 }
-                it.backgroundTintList =
-                    android.content.res.ColorStateList.valueOf(Color.parseColor("#4CAF50"))
+                (it as Button).backgroundTintList =
+                    android.content.res.ColorStateList.valueOf(Color.parseColor("#1E88E5"))
             }
         }
 
-        // Trim
+        // Save frame
+        findViewById<Button>(R.id.btnSaveFrame).setOnClickListener { saveCurrentFrame() }
+
+        // Trim buttons (in adjust mode)
         findViewById<Button>(R.id.btnSetStart).setOnClickListener {
             trimStartMs = player?.currentPosition ?: 0
             updateTrimInfo()
-            Toast.makeText(this, "Start set: ${trimStartMs}ms", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Start: ${trimStartMs}ms", Toast.LENGTH_SHORT).show()
         }
         findViewById<Button>(R.id.btnSetEnd).setOnClickListener {
             trimEndMs = player?.currentPosition ?: videoDurationMs
             updateTrimInfo()
-            Toast.makeText(this, "End set: ${trimEndMs}ms", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "End: ${trimEndMs}ms", Toast.LENGTH_SHORT).show()
         }
 
-        // Drawing tools
+        // Drawing tool buttons (in adjust mode)
+        val panBtn = findViewById<Button>(R.id.btnToolPan)
         val drawBtn = findViewById<Button>(R.id.btnToolDraw)
         val lineBtn = findViewById<Button>(R.id.btnToolLine)
+
+        fun highlightTool(active: Button) {
+            listOf(panBtn, drawBtn, lineBtn).forEach {
+                it.backgroundTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#42A5F5"))
+            }
+            active.backgroundTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#1E88E5"))
+        }
+
+        panBtn.setOnClickListener {
+            drawingView.touchEnabled = false
+            highlightTool(panBtn)
+        }
         drawBtn.setOnClickListener {
             drawingView.setTool(DrawingOverlayView.Tool.FREE_DRAW)
-            drawBtn.backgroundTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#4CAF50"))
-            lineBtn.backgroundTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#2D2D2D"))
+            drawingView.touchEnabled = true
+            highlightTool(drawBtn)
         }
         lineBtn.setOnClickListener {
             drawingView.setTool(DrawingOverlayView.Tool.LINE)
-            lineBtn.backgroundTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#4CAF50"))
-            drawBtn.backgroundTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#2D2D2D"))
+            drawingView.touchEnabled = true
+            highlightTool(lineBtn)
         }
+
         findViewById<Button>(R.id.btnUndo).setOnClickListener { drawingView.undo() }
         findViewById<Button>(R.id.btnClearDraw).setOnClickListener { drawingView.clear() }
 
@@ -216,10 +266,64 @@ class MainActivity : AppCompatActivity() {
         ).forEach { (id, color) ->
             findViewById<View>(id).setOnClickListener { drawingView.setColor(color) }
         }
+    }
 
-        // Extract + export
-        btnExtract.setOnClickListener { extractFrames() }
-        btnExport.setOnClickListener { exportSelected() }
+    private fun setupHoldStep(btnId: Int, stepMs: Long) {
+        findViewById<Button>(btnId).setOnTouchListener { _, event ->
+            when (event.action) {
+                MotionEvent.ACTION_DOWN -> {
+                    stepBy(stepMs)
+                    val r = object : Runnable {
+                        override fun run() {
+                            stepBy(stepMs)
+                            handler.postDelayed(this, 120)
+                        }
+                    }
+                    scrubRunnable = r
+                    handler.postDelayed(r, 350)
+                    true
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    scrubRunnable?.let { handler.removeCallbacks(it) }
+                    scrubRunnable = null
+                    true
+                }
+                else -> false
+            }
+        }
+    }
+
+    private fun toggleAdjustMode() {
+        adjustModeActive = !adjustModeActive
+        if (adjustModeActive) {
+            normalControls.visibility = View.GONE
+            adjustControls.visibility = View.VISIBLE
+            btnAdjust.text = "✓ Done"
+            btnAdjust.backgroundTintList =
+                android.content.res.ColorStateList.valueOf(Color.parseColor("#4CAF50"))
+            // Default to pan mode when entering adjust
+            drawingView.touchEnabled = false
+        } else {
+            normalControls.visibility = View.VISIBLE
+            adjustControls.visibility = View.GONE
+            btnAdjust.text = "✏ Adjust"
+            btnAdjust.backgroundTintList =
+                android.content.res.ColorStateList.valueOf(Color.parseColor("#42A5F5"))
+            drawingView.touchEnabled = false
+        }
+    }
+
+    private fun openCapture() {
+        val uri = videoUri ?: run {
+            Toast.makeText(this, "Load a video first", Toast.LENGTH_SHORT).show()
+            return
+        }
+        val intent = Intent(this, CaptureActivity::class.java).apply {
+            putExtra("videoUri", uri.toString())
+            putExtra("trimStart", trimStartMs)
+            putExtra("trimEnd", effectiveTrimEnd())
+        }
+        startActivity(intent)
     }
 
     private fun requestVideoAccess() {
@@ -238,8 +342,13 @@ class MainActivity : AppCompatActivity() {
         videoDurationMs = 0
         trimStartMs = 0
         trimEndMs = 0
+        // Reset video transform
+        videoContent.scaleX = 1f
+        videoContent.scaleY = 1f
+        videoContent.translationX = 0f
+        videoContent.translationY = 0f
+        videoScaleFactor = 1f
         drawingView.clear()
-        frameAdapter.clearFrames()
         player?.apply {
             setMediaItem(MediaItem.fromUri(uri))
             prepare()
@@ -253,94 +362,47 @@ class MainActivity : AppCompatActivity() {
 
     private fun stepBy(ms: Long) {
         val p = player ?: return
-        val end = if (trimEndMs > 0) trimEndMs else videoDurationMs
-        val newPos = (p.currentPosition + ms).coerceIn(0, end)
+        val end = effectiveTrimEnd()
+        if (end == 0L) return
+        val newPos = (p.currentPosition + ms).coerceIn(trimStartMs, end)
+        val wasPlaying = p.isPlaying
         p.seekTo(newPos)
+        if (!wasPlaying) p.playWhenReady = false
         seekBar.progress = newPos.toInt()
         tvPosition.text = "${newPos}ms"
     }
 
+    private fun effectiveTrimEnd(): Long =
+        if (trimEndMs > trimStartMs) trimEndMs else videoDurationMs
+
     private fun updateTrimInfo() {
-        val end = if (trimEndMs > 0) trimEndMs else videoDurationMs
+        val end = effectiveTrimEnd()
         tvTrimInfo.text = "Start: ${trimStartMs}ms  |  End: ${end}ms"
     }
 
-    private fun extractFrames() {
+    private fun saveCurrentFrame() {
         val uri = videoUri ?: run {
             Toast.makeText(this, "Load a video first", Toast.LENGTH_SHORT).show()
             return
         }
-        val intervalText = etInterval.text.toString().trim()
-        val intervalMs = intervalText.toLongOrNull()?.coerceAtLeast(1) ?: 100L
-        prefs.edit().putString("interval", intervalText).apply()
-
-        val start = trimStartMs
-        val end = if (trimEndMs > start) trimEndMs else videoDurationMs
-        if (end <= start) {
-            Toast.makeText(this, "Set trim start before end", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        btnExtract.isEnabled = false
-        btnExtract.text = "Extracting..."
-        frameAdapter.clearFrames()
-
+        val pos = player?.currentPosition ?: 0
         lifecycleScope.launch {
-            val frames = withContext(Dispatchers.IO) {
+            val saved = withContext(Dispatchers.IO) {
                 val retriever = MediaMetadataRetriever()
-                val result = mutableListOf<FrameItem>()
                 try {
                     retriever.setDataSource(applicationContext, uri)
-                    var t = start
-                    while (t <= end) {
-                        val bmp = retriever.getFrameAtTime(
-                            t * 1000L,
-                            MediaMetadataRetriever.OPTION_CLOSEST
-                        )
-                        bmp?.let {
-                            // Scale down to save memory
-                            val scaled = Bitmap.createScaledBitmap(it, 480,
-                                (it.height * 480f / it.width).toInt(), true)
-                            if (scaled !== it) it.recycle()
-                            result.add(FrameItem(scaled, t - start))
-                        }
-                        t += intervalMs
-                    }
-                } catch (_: Exception) {
-                } finally {
-                    retriever.release()
-                }
-                result
+                    val bmp = retriever.getFrameAtTime(pos * 1000L, MediaMetadataRetriever.OPTION_CLOSEST)
+                    bmp?.let { saveFrameToGallery(it, pos) } != null
+                } catch (_: Exception) { false }
+                finally { retriever.release() }
             }
-            frameAdapter.setFrames(frames)
-            btnExtract.isEnabled = true
-            btnExtract.text = "Extract Frames"
-            if (frames.isEmpty())
-                Toast.makeText(this@MainActivity, "No frames extracted", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this@MainActivity, if (saved) "Frame saved" else "Save failed", Toast.LENGTH_SHORT).show()
         }
     }
 
-    private fun exportSelected() {
-        val selected = frameAdapter.getSelectedFrames()
-        if (selected.isEmpty()) return
-        lifecycleScope.launch {
-            val uris = withContext(Dispatchers.IO) {
-                selected.mapNotNull { saveFrame(it.bitmap, it.timestampMs) }
-            }
-            if (uris.isNotEmpty()) {
-                val intent = Intent(Intent.ACTION_SEND_MULTIPLE).apply {
-                    type = "image/jpeg"
-                    putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList(uris))
-                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                }
-                startActivity(Intent.createChooser(intent, "Export Frames"))
-            }
-        }
-    }
-
-    private fun saveFrame(bitmap: Bitmap, timestampMs: Long): Uri? {
+    private fun saveFrameToGallery(bitmap: Bitmap, timestampMs: Long): Uri? {
         val values = ContentValues().apply {
-            put(MediaStore.Images.Media.DISPLAY_NAME, "framecaddy_${timestampMs}ms_${System.currentTimeMillis()}.jpg")
+            put(MediaStore.Images.Media.DISPLAY_NAME, "framecaddy_${timestampMs}ms.jpg")
             put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
                 put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/FrameCaddy")
@@ -348,14 +410,14 @@ class MainActivity : AppCompatActivity() {
         return try {
             val uri = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
             uri?.also {
-                contentResolver.openOutputStream(it)?.use { s -> bitmap.compress(Bitmap.CompressFormat.JPEG, 90, s) }
+                contentResolver.openOutputStream(it)?.use { s -> bitmap.compress(Bitmap.CompressFormat.JPEG, 95, s) }
             }
         } catch (_: Exception) { null }
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        handler.removeCallbacks(positionUpdater)
+        handler.removeCallbacksAndMessages(null)
         player?.release()
         player = null
     }

@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/colorBg"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- Top bar -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:orientation="horizontal"
+            android:background="@color/colorSurface"
+            android:gravity="center_vertical"
+            android:paddingStart="6dp"
+            android:paddingEnd="6dp">
+
+            <Button
+                android:id="@+id/btnBack"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:text="←"
+                android:textSize="16sp"
+                android:textColor="@color/colorBtnText"
+                android:backgroundTint="@color/colorBtn"
+                android:layout_marginEnd="8dp" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Frame Capture"
+                android:textColor="@color/colorText"
+                android:textSize="17sp"
+                android:textStyle="bold" />
+
+        </LinearLayout>
+
+        <!-- Trim range info -->
+        <TextView
+            android:id="@+id/tvCaptureTrimInfo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:paddingTop="10dp"
+            android:paddingBottom="6dp"
+            android:text="Trim: not set"
+            android:textColor="@color/colorTextSecondary"
+            android:textSize="12sp" />
+
+        <!-- Interval + Extract row -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:background="@color/colorSurface">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Every"
+                android:textColor="@color/colorText"
+                android:textSize="13sp"
+                android:layout_marginEnd="6dp" />
+
+            <EditText
+                android:id="@+id/etInterval"
+                android:layout_width="72dp"
+                android:layout_height="wrap_content"
+                android:inputType="number"
+                android:text="100"
+                android:textColor="@color/colorText"
+                android:backgroundTint="@color/colorBtn"
+                android:textSize="14sp"
+                android:textAlignment="center"
+                android:gravity="center" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="ms"
+                android:textColor="@color/colorTextSecondary"
+                android:textSize="13sp"
+                android:layout_marginStart="4dp"
+                android:layout_marginEnd="10dp" />
+
+            <Button
+                android:id="@+id/btnExtract"
+                android:layout_width="0dp"
+                android:layout_height="40dp"
+                android:layout_weight="1"
+                android:text="Extract Frames"
+                android:textSize="12sp"
+                android:textColor="@color/colorBtnText"
+                android:backgroundTint="@color/colorBtn" />
+
+        </LinearLayout>
+
+        <!-- Export button -->
+        <Button
+            android:id="@+id/btnExport"
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            android:layout_marginStart="6dp"
+            android:layout_marginEnd="6dp"
+            android:layout_marginTop="8dp"
+            android:text="Export Selected"
+            android:textColor="@color/colorBtnText"
+            android:backgroundTint="@color/colorBtnGray"
+            android:enabled="false"
+            android:textSize="13sp" />
+
+        <!-- Frames grid -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/framesGrid"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:nestedScrollingEnabled="false"
+            android:clipToPadding="false"
+            android:padding="3dp" />
+
+        <!-- Bottom padding -->
+        <View android:layout_width="match_parent" android:layout_height="20dp" />
+
+    </LinearLayout>
+
+</ScrollView>

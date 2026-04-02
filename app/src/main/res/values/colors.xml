@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="ic_launcher_background">#1B5E20</color>
-    <color name="colorBg">#121212</color>
-    <color name="colorSurface">#1E1E1E</color>
-    <color name="colorAccent">#4CAF50</color>
-    <color name="colorText">#FFFFFF</color>
-    <color name="colorTextSecondary">#B3FFFFFF</color>
-    <color name="colorBtn">#2D2D2D</color>
-    <color name="colorBtnTrim">#1565C0</color>
+    <color name="ic_launcher_background">#D7C9A8</color>
+    <color name="colorBg">#FFFFFF</color>
+    <color name="colorSurface">#F5F5F5</color>
+    <color name="colorBtn">#42A5F5</color>
+    <color name="colorBtnDark">#1E88E5</color>
+    <color name="colorBtnGray">#E0E0E0</color>
+    <color name="colorText">#212121</color>
+    <color name="colorTextSecondary">#757575</color>
+    <color name="colorBtnText">#FFFFFF</color>
+    <color name="colorTrim">#EF5350</color>
 </resources>

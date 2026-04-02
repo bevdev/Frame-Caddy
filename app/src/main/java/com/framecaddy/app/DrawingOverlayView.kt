@@ -12,6 +12,8 @@ class DrawingOverlayView @JvmOverloads constructor(
 
     enum class Tool { FREE_DRAW, LINE }
 
+    var touchEnabled = false
+
     private data class Element(
         val tool: Tool,
         val path: Path?,
@@ -36,6 +38,7 @@ class DrawingOverlayView @JvmOverloads constructor(
     private val dashEffect = DashPathEffect(floatArrayOf(20f, 10f), 0f)
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
+        if (!touchEnabled) return false
         val x = event.x
         val y = event.y
         when (event.action) {

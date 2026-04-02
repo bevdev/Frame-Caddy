@@ -5,27 +5,69 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- Golf club shaft -->
+    <!-- Bag body (dark brown) -->
     <path
-        android:strokeColor="#FFFFFF"
-        android:strokeWidth="5"
-        android:strokeLineCap="round"
-        android:fillColor="@android:color/transparent"
-        android:pathData="M36,18 L58,80" />
+        android:fillColor="#5D3A1A"
+        android:pathData="M32,44 L32,84 Q32,90 38,90 L70,90 Q76,90 76,84 L76,44 Z" />
 
-    <!-- Club head (iron) -->
+    <!-- Top collar (darker brown) -->
+    <path
+        android:fillColor="#3E2309"
+        android:pathData="M30,34 Q30,28 54,27 Q78,28 78,34 L78,46 L30,46 Z" />
+
+    <!-- Left handle arc (stroke only) -->
+    <path
+        android:strokeColor="#3E2309"
+        android:strokeWidth="4"
+        android:fillColor="@android:color/transparent"
+        android:strokeLineCap="round"
+        android:pathData="M32,62 C20,62 20,78 32,78" />
+
+    <!-- Front pocket -->
+    <path
+        android:fillColor="#3E2309"
+        android:pathData="M52,66 Q46,66 46,73 Q46,82 54,82 L70,82 Q76,82 76,73 Q76,66 70,66 Z" />
+
+    <!-- Golf ball in pocket (white) -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M51,74 L65,78 L62,88 L48,84 Z" />
+        android:pathData="M62,68 m-5,0 a5,5 0 1,0 10,0 a5,5 0 1,0 -10,0" />
 
-    <!-- Film frame grid — 4 squares (top right) -->
-    <path android:fillColor="#81C784" android:pathData="M63,22 L75,22 L75,34 L63,34 Z" />
-    <path android:fillColor="#81C784" android:pathData="M77,22 L89,22 L89,34 L77,34 Z" />
-    <path android:fillColor="#81C784" android:pathData="M63,36 L75,36 L75,48 L63,48 Z" />
-    <path android:fillColor="#81C784" android:pathData="M77,36 L89,36 L89,48 L77,48 Z" />
+    <!-- Phone body (dark, sticking up) -->
+    <path
+        android:fillColor="#212121"
+        android:pathData="M39,10 Q37,10 37,12 L37,41 Q37,43 39,43 L51,43 Q53,43 53,41 L53,12 Q53,10 51,10 Z" />
 
-    <!-- Small gap lines between squares (film strip feel) -->
-    <path android:fillColor="#1B5E20" android:pathData="M63,35 L89,35 L89,36 L63,36 Z" />
-    <path android:fillColor="#1B5E20" android:pathData="M76,22 L77,22 L77,48 L76,48 Z" />
+    <!-- Phone screen (light blue) -->
+    <path
+        android:fillColor="#64B5F6"
+        android:pathData="M39,13 L51,13 L51,38 L39,38 Z" />
+
+    <!-- Ruler (orange, sticking up) -->
+    <path
+        android:fillColor="#FFA726"
+        android:pathData="M65,10 L68,10 L68,42 L65,42 Z" />
+
+    <!-- Ruler tick marks -->
+    <path
+        android:strokeColor="#E65100"
+        android:strokeWidth="1.5"
+        android:fillColor="@android:color/transparent"
+        android:pathData="M65,16 L67,16 M65,21 L68,21 M65,26 L67,26 M65,31 L68,31 M65,36 L67,36" />
+
+    <!-- Magnifying glass lens -->
+    <path
+        android:fillColor="#B3E5FC"
+        android:strokeColor="#90CAF9"
+        android:strokeWidth="2"
+        android:pathData="M58,14 m-6,0 a6,6 0 1,0 12,0 a6,6 0 1,0 -12,0" />
+
+    <!-- Magnifying glass handle -->
+    <path
+        android:strokeColor="#5D3A1A"
+        android:strokeWidth="3"
+        android:fillColor="@android:color/transparent"
+        android:strokeLineCap="round"
+        android:pathData="M62,19 L67,28" />
 
 </vector>
