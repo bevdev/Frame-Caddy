@@ -259,10 +259,9 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.btnClearDraw).setOnClickListener { drawingView.clear() }
 
         listOf(
-            R.id.btnColorWhite to Color.WHITE,
             R.id.btnColorRed to Color.RED,
-            R.id.btnColorYellow to Color.YELLOW,
-            R.id.btnColorGreen to Color.GREEN
+            R.id.btnColorBlue to Color.parseColor("#2196F3"),
+            R.id.btnColorYellow to Color.YELLOW
         ).forEach { (id, color) ->
             findViewById<View>(id).setOnClickListener { drawingView.setColor(color) }
         }
@@ -298,7 +297,7 @@ class MainActivity : AppCompatActivity() {
         if (adjustModeActive) {
             normalControls.visibility = View.GONE
             adjustControls.visibility = View.VISIBLE
-            btnAdjust.text = "✓ Done"
+            btnAdjust.text = "✓"
             btnAdjust.backgroundTintList =
                 android.content.res.ColorStateList.valueOf(Color.parseColor("#4CAF50"))
             // Default to pan mode when entering adjust
@@ -306,7 +305,7 @@ class MainActivity : AppCompatActivity() {
         } else {
             normalControls.visibility = View.VISIBLE
             adjustControls.visibility = View.GONE
-            btnAdjust.text = "✏ Adjust"
+            btnAdjust.text = "✏"
             btnAdjust.backgroundTintList =
                 android.content.res.ColorStateList.valueOf(Color.parseColor("#42A5F5"))
             drawingView.touchEnabled = false
