@@ -105,6 +105,32 @@
 
         </LinearLayout>
 
+        <!-- Frame count preview + progress -->
+        <TextView
+            android:id="@+id/tvFramePreview"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:paddingTop="6dp"
+            android:paddingBottom="2dp"
+            android:text=""
+            android:textColor="@color/colorBtn"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvProgress"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:paddingBottom="4dp"
+            android:text=""
+            android:textColor="@color/colorTextSecondary"
+            android:textSize="12sp"
+            android:visibility="gone" />
+
         <!-- Export button -->
         <Button
             android:id="@+id/btnExport"
