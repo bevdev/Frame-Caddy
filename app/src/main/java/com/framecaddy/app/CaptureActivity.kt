@@ -21,14 +21,8 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import android.media.MediaMetadataRetriever
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Semaphore
-import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
-import java.util.concurrent.atomic.AtomicInteger
 
 class CaptureActivity : AppCompatActivity() {
 
@@ -136,37 +130,35 @@ class CaptureActivity : AppCompatActivity() {
         frameAdapter.clearFrames()
 
         val total = timestamps.size
-        val done = AtomicInteger(0)
 
         lifecycleScope.launch {
-            val frames = coroutineScope {
-                val semaphore = Semaphore(4) // max 4 concurrent decoders
-                timestamps.map { t ->
-                    async(Dispatchers.IO) {
-                        semaphore.withPermit {
-                            val retriever = MediaMetadataRetriever()
-                            try {
-                                retriever.setDataSource(applicationContext, uri)
-                                val bmp = retriever.getFrameAtTime(
-                                    t * 1000L,
-                                    MediaMetadataRetriever.OPTION_CLOSEST
-                                )
-                                bmp?.let {
-                                    val w = 480
-                                    val h = (it.height * w.toFloat() / it.width).toInt()
-                                    val scaled = Bitmap.createScaledBitmap(it, w, h, true)
-                                    if (scaled !== it) it.recycle()
-                                    val n = done.incrementAndGet()
-                                    withContext(Dispatchers.Main) {
-                                        tvProgress.text = "Extracting… $n / $total"
-                                    }
-                                    FrameItem(scaled, t - trimStart)
-                                }
-                            } catch (_: Exception) { null }
-                            finally { retriever.release() }
+            val frames = withContext(Dispatchers.IO) {
+                val retriever = MediaMetadataRetriever()
+                val result = mutableListOf<FrameItem>()
+                try {
+                    retriever.setDataSource(applicationContext, uri)
+                    timestamps.forEachIndexed { index, t ->
+                        val bmp = retriever.getFrameAtTime(
+                            t * 1000L,
+                            MediaMetadataRetriever.OPTION_CLOSEST
+                        )
+                        bmp?.let {
+                            val w = 480
+                            val h = (it.height * w.toFloat() / it.width).toInt()
+                            val scaled = Bitmap.createScaledBitmap(it, w, h, true)
+                            if (scaled !== it) it.recycle()
+                            result.add(FrameItem(scaled, t - trimStart))
+                        }
+                        val n = index + 1
+                        withContext(Dispatchers.Main) {
+                            tvProgress.text = "Extracting… $n / $total"
                         }
                     }
-                }.awaitAll().filterNotNull().sortedBy { it.timestampMs }
+                } catch (_: Exception) {
+                } finally {
+                    retriever.release()
+                }
+                result
             }
 
             frameAdapter.setFrames(frames)
