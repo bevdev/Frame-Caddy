@@ -59,6 +59,7 @@ class MainActivity : AppCompatActivity() {
     private val handler = Handler(Looper.getMainLooper())
     private val prefs by lazy { getSharedPreferences("framecaddy", MODE_PRIVATE) }
 
+    private var isScrubbing = false
     // Hold-to-scrub
     private var scrubRunnable: Runnable? = null
 
@@ -69,9 +70,9 @@ class MainActivity : AppCompatActivity() {
             val end = effectiveTrimEnd()
             if (p.isPlaying && end > 0 && pos >= end) {
                 p.seekTo(trimStartMs)
-                seekBar.progress = trimStartMs.toInt()
+                if (!isScrubbing) seekBar.progress = trimStartMs.toInt()
                 tvPosition.text = "${trimStartMs}ms"
-            } else {
+            } else if (!isScrubbing) {
                 seekBar.progress = pos.toInt()
                 tvPosition.text = "${pos}ms"
             }
@@ -187,8 +188,8 @@ class MainActivity : AppCompatActivity() {
                     tvPosition.text = "${progress}ms"
                 }
             }
-            override fun onStartTrackingTouch(sb: SeekBar) {}
-            override fun onStopTrackingTouch(sb: SeekBar) {}
+            override fun onStartTrackingTouch(sb: SeekBar) { isScrubbing = true }
+            override fun onStopTrackingTouch(sb: SeekBar) { isScrubbing = false }
         })
 
         // Step buttons with hold-to-scrub
