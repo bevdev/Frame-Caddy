@@ -40,8 +40,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvTrimInfo: TextView
     private lateinit var btnPlay: Button
     private lateinit var btnAdjust: Button
-    private lateinit var normalControls: View
-    private lateinit var adjustControls: View
+    private lateinit var playbackTopBar: View
+    private lateinit var adjustTopBar: View
 
     private var player: ExoPlayer? = null
     private var videoUri: Uri? = null
@@ -60,7 +60,6 @@ class MainActivity : AppCompatActivity() {
     private val prefs by lazy { getSharedPreferences("framecaddy", MODE_PRIVATE) }
 
     private var isScrubbing = false
-    // Hold-to-scrub
     private var scrubRunnable: Runnable? = null
 
     private val positionUpdater = object : Runnable {
@@ -70,8 +69,10 @@ class MainActivity : AppCompatActivity() {
             val end = effectiveTrimEnd()
             if (p.isPlaying && end > 0 && pos >= end) {
                 p.seekTo(trimStartMs)
-                if (!isScrubbing) seekBar.progress = trimStartMs.toInt()
-                tvPosition.text = "${trimStartMs}ms"
+                if (!isScrubbing) {
+                    seekBar.progress = trimStartMs.toInt()
+                    tvPosition.text = "${trimStartMs}ms"
+                }
             } else if (!isScrubbing) {
                 seekBar.progress = pos.toInt()
                 tvPosition.text = "${pos}ms"
@@ -110,8 +111,8 @@ class MainActivity : AppCompatActivity() {
         tvTrimInfo = findViewById(R.id.tvTrimInfo)
         btnPlay = findViewById(R.id.btnPlay)
         btnAdjust = findViewById(R.id.btnAdjust)
-        normalControls = findViewById(R.id.normalControls)
-        adjustControls = findViewById(R.id.adjustControls)
+        playbackTopBar = findViewById(R.id.playbackTopBar)
+        adjustTopBar = findViewById(R.id.adjustTopBar)
     }
 
     private fun setupScaleDetector() {
@@ -153,6 +154,7 @@ class MainActivity : AppCompatActivity() {
                     if (state == Player.STATE_READY && videoDurationMs == 0L) {
                         videoDurationMs = exo.duration.coerceAtLeast(0)
                         trimEndMs = videoDurationMs
+                        seekBar.min = 0
                         seekBar.max = videoDurationMs.toInt()
                         updateTrimInfo()
                         tvNoVideo.visibility = View.GONE
@@ -177,10 +179,13 @@ class MainActivity : AppCompatActivity() {
         // Adjust mode toggle
         btnAdjust.setOnClickListener { toggleAdjustMode() }
 
+        // Done button (in adjust top bar)
+        findViewById<Button>(R.id.btnDone).setOnClickListener { toggleAdjustMode() }
+
         // Play/pause
         btnPlay.setOnClickListener { togglePlay() }
 
-        // Seekbar
+        // Seekbar — seeks in real time as user drags
         seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(sb: SeekBar, progress: Int, fromUser: Boolean) {
                 if (fromUser) {
@@ -192,7 +197,7 @@ class MainActivity : AppCompatActivity() {
             override fun onStopTrackingTouch(sb: SeekBar) { isScrubbing = false }
         })
 
-        // Step buttons with hold-to-scrub
+        // Step buttons — tap to step, hold to continuous scrub
         setupHoldStep(R.id.btnBack500, -500)
         setupHoldStep(R.id.btnBack250, -250)
         setupHoldStep(R.id.btnBack100, -100)
@@ -214,22 +219,36 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Save frame
-        findViewById<Button>(R.id.btnSaveFrame).setOnClickListener { saveCurrentFrame() }
-
-        // Trim buttons (in adjust mode)
+        // Set Start — lock seekbar min, jump to trim start
         findViewById<Button>(R.id.btnSetStart).setOnClickListener {
-            trimStartMs = player?.currentPosition ?: 0
+            val pos = player?.currentPosition ?: 0L
+            trimStartMs = pos
+            seekBar.min = trimStartMs.toInt()
+            // Clamp trim end if it's now before start
+            if (trimEndMs in 1 until trimStartMs) {
+                trimEndMs = effectiveTrimEnd()
+                seekBar.max = trimEndMs.toInt()
+            }
+            player?.seekTo(trimStartMs)
+            seekBar.progress = trimStartMs.toInt()
+            tvPosition.text = "${trimStartMs}ms"
             updateTrimInfo()
             Toast.makeText(this, "Start: ${trimStartMs}ms", Toast.LENGTH_SHORT).show()
         }
+
+        // Set End — lock seekbar max
         findViewById<Button>(R.id.btnSetEnd).setOnClickListener {
-            trimEndMs = player?.currentPosition ?: videoDurationMs
+            val pos = player?.currentPosition ?: videoDurationMs
+            trimEndMs = pos
+            seekBar.max = trimEndMs.toInt()
             updateTrimInfo()
             Toast.makeText(this, "End: ${trimEndMs}ms", Toast.LENGTH_SHORT).show()
         }
 
-        // Drawing tool buttons (in adjust mode)
+        // Save current frame
+        findViewById<Button>(R.id.btnSaveFrame).setOnClickListener { saveCurrentFrame() }
+
+        // Drawing tool buttons (in adjust top bar)
         val panBtn = findViewById<Button>(R.id.btnToolPan)
         val drawBtn = findViewById<Button>(R.id.btnToolDraw)
         val lineBtn = findViewById<Button>(R.id.btnToolLine)
@@ -296,19 +315,20 @@ class MainActivity : AppCompatActivity() {
     private fun toggleAdjustMode() {
         adjustModeActive = !adjustModeActive
         if (adjustModeActive) {
-            normalControls.visibility = View.GONE
-            adjustControls.visibility = View.VISIBLE
-            btnAdjust.text = "✓"
-            btnAdjust.backgroundTintList =
-                android.content.res.ColorStateList.valueOf(Color.parseColor("#4CAF50"))
+            playbackTopBar.visibility = View.GONE
+            adjustTopBar.visibility = View.VISIBLE
             // Default to pan mode when entering adjust
             drawingView.touchEnabled = false
+            val panBtn = findViewById<Button>(R.id.btnToolPan)
+            panBtn.backgroundTintList =
+                android.content.res.ColorStateList.valueOf(Color.parseColor("#1E88E5"))
+            listOf(R.id.btnToolDraw, R.id.btnToolLine).forEach {
+                findViewById<Button>(it).backgroundTintList =
+                    android.content.res.ColorStateList.valueOf(Color.parseColor("#42A5F5"))
+            }
         } else {
-            normalControls.visibility = View.VISIBLE
-            adjustControls.visibility = View.GONE
-            btnAdjust.text = "✏"
-            btnAdjust.backgroundTintList =
-                android.content.res.ColorStateList.valueOf(Color.parseColor("#42A5F5"))
+            playbackTopBar.visibility = View.VISIBLE
+            adjustTopBar.visibility = View.GONE
             drawingView.touchEnabled = false
         }
     }
@@ -342,6 +362,8 @@ class MainActivity : AppCompatActivity() {
         videoDurationMs = 0
         trimStartMs = 0
         trimEndMs = 0
+        seekBar.min = 0
+        seekBar.max = 0
         // Reset video transform
         videoContent.scaleX = 1f
         videoContent.scaleY = 1f
